@@ -3,7 +3,7 @@ import datetime
 
 
 class EventModel:
-    def __init__(self, eid, title, tags: Tags, description, image, hosts, attendees: [str], event_date,
+    def __init__(self, eid, title, tags: [Tags], description, image, hosts: [str], attendees: [str], event_date,
                  location, register_period):
         self.eid = eid
         self.title = title

@@ -1,5 +1,4 @@
 from tkinter import *
-from tkinter import ttk
 import Controller.EventController as EventController
 import Controller.UserController as UserController
 from Model.EventModel import EventModel as EventModel
@@ -7,17 +6,17 @@ from Model.UserModel import UserModel as UserModel
 from Constants.Constants import Errors
 from Constants.Constants import UserFields
 
-current_event: UserModel = None
-current_user: UserModel = None
+current_event = None
+current_user = None
 
 
 def read_event():
-    eid = 0
+    eid = 1
     event_title = str(title_input.get())
     tags = str(tags_input.get())
     description = str(description_input.get())
     image = str(image_input.get())
-    hosts = None
+    hosts = []
     attendees = []
     event_date = str(event_date_input.get())
     location = str(location_input.get())
@@ -52,66 +51,24 @@ def post_event():
     if not current_user:
         add_output("You have to login first! \n")
     else:
-        result = EventController.add_event(current_user, current_event)
+        result = EventController.post_event(current_user, current_event)
         if result == Errors.DUPLICATE.name:
-            current_event.eid = None
             add_output("A same event already exists! \n")
         elif result == Errors.FAILURE.name:
-            current_event.eid = None
             return_failure()
-        add_output('Event #' + str(result) + ' has been posted. \n')
         current_event.eid = result
-
         result = EventController.host_event(current_user, current_event)
         if result == Errors.DUPLICATE.name:
-            current_event.eid = None
-            add_output("You have already hosted this event! \n")
+            add_output("A same event already exists! \n")
         elif result == Errors.FAILURE.name:
-            current_event.eid = None
             return_failure()
-        add_output("You are the host of event " + str(current_event.eid) + " now. \n")
-        current_event.hosts = current_user.uid
-        current_user.host_events.append(current_event.eid)
-        print('User #' + current_event.hosts + ' posted event #' + str(current_event.eid) + '. \n')
-        EventController.print_event(current_event)
     return
 
 
 def update_event():
-    global current_event
-    global current_user
-    event_id = event_id_input.get()
-    current_event = read_event()
-    current_event.eid = event_id
-    host_id = None
-    temp_event = EventController.retrieve_event(event_id)
-    if temp_event == Errors.MISSING.name:
-        add_output('No such event. \n')
-        current_event = None
-        return
-    if type(temp_event) == type(current_event):
-        host_id = str(EventController.retrieve_event(event_id).hosts)
-    if current_user.uid != host_id:
-        add_output('You have to be the owner to update event #' + event_id + ' . \n')
-        current_event = None
-        return
-
-    result = EventController.edit_event(current_event)
-
-    if result == Errors.MISSING.name:
-        add_output('No such event exists. \n')
-        current_event = None
-        EventController.print_event(current_event)
-        return
-    elif result == Errors.SUCCESS.name:
-        add_output('Event #' + event_id + ' changed. \n')
-        current_event = EventController.retrieve_event(event_id)
-        EventController.print_event(current_event)
-    else:
-        add_output('Update failed, please try again. \n')
-        current_event = None
-        EventController.print_event(current_event)
-        return
+    event_title = title_input.get()
+    print(event_title)
+    return
 
 
 def remove_user():
@@ -122,7 +79,9 @@ def remove_user():
 def register():
     global current_user
     current_user = read_user()
+
     result = UserController.add_user(current_user)
+    print(result)
     if result == Errors.DUPLICATE.name:
         add_output("A user with the same credentials already exists! \n")
         current_user = None
@@ -132,58 +91,28 @@ def register():
     else:
         add_output("User registered JoinMe with email " + current_user.email + ". \n")
         current_user = UserController.retrieve_user(UserFields.email.name, current_user.email)
-    UserController.print_user(current_user)
+    print(current_user)
     return
 
 
 def update_profile():
     global current_user
-    if not current_user:
-        add_output("You have to login first! \n")
-        return
-    temp = UserController.retrieve_user(UserFields.email.name, current_user.email)
-    if temp == Errors.MISSING.name:
-        add_output("No user with such credentials exists. \n")
-        return
-    elif temp == Errors.FAILURE.name:
-        return_failure()
-        return
-    user_id = current_user.uid
-    current_user = read_user()
-    current_user.uid = user_id
-
-    result = UserController.edit_user(current_user)
-    if result == Errors.MISSING.name:
-        add_output("No user with such credentials exists. \n")
-        current_user = temp
-    elif result == Errors.FAILURE.name:
-        return_failure()
-        current_user = temp
-    elif result == Errors.DUPLICATE.name:
-        add_output("A user with the same credentials already exists! \n")
-        current_user = temp
-    else:
-        add_output("User updated. Email now at: " + current_user.email + ". \n")
-        current_user = UserController.retrieve_user(UserFields.userid.name, result)
-    UserController.print_user(current_user)
     return
 
 
 def login():
     global current_user
+    current_user = None
     email = user_email_input.get()
     result = UserController.retrieve_user(UserFields.email.name, email)
     if result == Errors.MISSING.name:
         add_output("No user with such credential exists. \n")
-        UserController.print_user(current_user)
-        return
     elif result == Errors.FAILURE.name:
         add_output("Failed to login. Please try again. \n")
-        UserController.print_user(current_user)
-        return
-    add_output("You logged in with email " + email + ". \n")
-    current_user = UserController.retrieve_user(UserFields.email.name, email)
-    UserController.print_user(current_user)
+    else:
+        add_output("You logged in with email " + email + ". \n")
+        current_user = result
+    print(current_user)
     return
 
 
@@ -191,6 +120,10 @@ def log_out():
     global current_user
     current_user = None
     text.set(value="This is the first iteration demo for JoinMe. \n")
+
+
+def update():
+    return 
 
 
 def group_email():
@@ -208,38 +141,6 @@ def add_output(line: str):
 
 def return_failure():
     add_output("Connection failed. Please try again. \n")
-
-
-def join_event():
-    global current_event
-    global current_user
-    event_id = event_id_input.get()
-    current_event = EventController.retrieve_event(event_id)
-    if current_event == Errors.MISSING.name:
-        add_output('Event not found. \n')
-        current_event = None
-        return
-    elif current_event == Errors.FAILURE.name:
-        add_output('Failed to join event. \n')
-        current_event = None
-        return
-    if not current_user:
-        add_output('You have to login first to join events. \n')
-        current_event = None
-        return
-
-    result = EventController.join_event(current_user, current_event)
-    if result == Errors.DUPLICATE.name:
-        add_output('You have already joined the event. \n')
-    elif result == Errors.FAILURE.name:
-        return_failure()
-        current_event = None
-        return
-    else:
-        add_output('You have joined event #' + current_event.eid + '. User ID: ' + current_user.uid + '. \n')
-
-    EventController.print_event(current_event)
-    return
 
 
 window = Tk()
@@ -263,7 +164,6 @@ description_input.place(x=170, y=60)
 
 Event_Tags = Label(window, text='Tags:')
 Event_Tags.place(x=90, y=90)
-
 tags_input = Entry(window, relief='ridge', width=50)
 tags_input.place(x=170, y=90)
 
@@ -288,28 +188,19 @@ period_input = Entry(window, relief='ridge', width=50)
 period_input.place(x=170, y=210)
 
 post_button = Button(window, text="Post Event", command=post_event)
-post_button.place(x=90, y=242.5)
+post_button.place(x=90, y=240)
 
 update_button = Button(window, text="Update Event", command=update_event)
-update_button.place(x=170, y=242.5)
+update_button.place(x=170, y=240)
 
-
-Event_id_join = Label(window, text='Event ID:')
-Event_id_join.place(x=260, y=242.5)
-
-event_id_input = Entry(window, relief='ridge', width=10)
-event_id_input.place(x=320, y=240.5)
-
-join_button = Button(window, text="Join Event", command=join_event)
-join_button.place(x=420, y= 243.5)
 
 Event_user = Label(window, text='User ID:')
-Event_user.place(x=180, y=270)
-user_id_input = Entry(window, relief='ridge', width=10)
-user_id_input.place(x=240, y=270)
+Event_user.place(x=180, y=265)
+userID_input = Entry(window, relief='ridge', width=10)
+userID_input.place(x=240, y=270)
 
 remove_button = Button(window, text="Remove User", command=remove_user)
-remove_button.place(x=90, y=270)
+remove_button.place(x=90, y=265)
 
 label_user = Label(window,
                    text='------------------------------------------- User -------------------------------------------')
@@ -362,26 +253,24 @@ user_email_input = Entry(window, relief='ridge', width=30)
 user_email_input.place(x=200, y=555)
 
 search_button = Button(window, text="Login with Email", command=login)
-search_button.place(x=90, y=557.5)
+search_button.place(x=90, y=550)
 
 logout_button = Button(window, text="Logout", command=log_out)
-logout_button.place(x=490, y=557.5)
+logout_button.place(x=400, y=550)
 
 # ------------------------------------------- Email -------------------------------------------
 
+group_email_button = Button(window, text="Group Email", command=group_email)
+group_email_button.place(x=90, y=580)
+
 invite_friend_button = Button(window, text="Invite Friend", command=invite_friend)
-invite_friend_button.place(x=90, y=587.5)
+invite_friend_button.place(x=180, y=580)
 
 Email_User_Nickname = Label(window, text='User Nickname:')
-Email_User_Nickname.place(x=180, y=587.5)
+Email_User_Nickname.place(x=270, y=585)
 email_nickname_input = Entry(window, relief='ridge', width=10)
-email_nickname_input.place(x=290, y=585)
+email_nickname_input.place(x=380, y=585)
 
-group_email_button = Button(window, text="Group Email", command=group_email)
-group_email_button.place(x=90, y=615)
-
-email_message_input = Entry(window, relief='ridge', width=50)
-email_message_input.place(x=170, y=610)
 
 # ------------------------------------------- Output -------------------------------------------
 
@@ -392,4 +281,5 @@ output_value = Label(window, textvariable=text)
 text.set(value="This is the first iteration demo for JoinMe. \n")
 output_value.pack()
 output_value.place(x=700, y=40)
+
 window.mainloop()
