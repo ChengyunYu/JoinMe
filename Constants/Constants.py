@@ -9,8 +9,8 @@ class ConnectConstants:
 
 
 class UserFields(Enum):
-    uid = 1
-    name = 2
+    userid = 1
+    realname = 2
     nickname = 3
     gender = 4
     email = 5
@@ -29,6 +29,7 @@ class Tags(Enum):
     entertaining = 7
     charity = 8
     business = 9
+
 
 class Errors(Enum):
     SUCCESS = 1

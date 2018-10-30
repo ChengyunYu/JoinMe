@@ -7,18 +7,17 @@ from Model.UserModel import UserModel as UserModel
 from Constants.Constants import Errors
 from Constants.Constants import UserFields
 
-current_event = None
-current_user = None
+current_event: UserModel = None
+current_user: UserModel = None
 
-# this is a change.
 
 def read_event():
-    eid = 1
+    eid = 0
     event_title = str(title_input.get())
     tags = str(tags_input.get())
     description = str(description_input.get())
     image = str(image_input.get())
-    hosts = []
+    hosts = None
     attendees = []
     event_date = str(event_date_input.get())
     location = str(location_input.get())
@@ -53,23 +52,36 @@ def post_event():
     if not current_user:
         add_output("You have to login first! \n")
     else:
-        result = EventController.post_event(current_user, current_event)
+        result = EventController.add_event(current_user, current_event)
         if result == Errors.DUPLICATE.name:
+            current_event.eid = None
             add_output("A same event already exists! \n")
         elif result == Errors.FAILURE.name:
+            current_event.eid = None
             return_failure()
+        add_output('Event #' + str(result) + ' has been posted. \n')
         current_event.eid = result
+
         result = EventController.host_event(current_user, current_event)
         if result == Errors.DUPLICATE.name:
-            add_output("A same event already exists! \n")
+            current_event.eid = None
+            add_output("You have already hosted this event! \n")
         elif result == Errors.FAILURE.name:
+            current_event.eid = None
             return_failure()
+        add_output("You are the host of event " + str(current_event.eid) + " now. \n")
+        current_event.hosts = current_user.uid
+        current_user.host_events.append(current_event.eid)
+        print('User #' + current_event.hosts + ' posted event #' + str(current_event.eid) + '. \n')
     return
 
 
 def update_event():
-    event_title = title_input.get()
-    print(event_title)
+    global current_event
+    global current_user
+    event_id =
+
+
     return
 
 
@@ -81,9 +93,7 @@ def remove_user():
 def register():
     global current_user
     current_user = read_user()
-
     result = UserController.add_user(current_user)
-    print(result)
     if result == Errors.DUPLICATE.name:
         add_output("A user with the same credentials already exists! \n")
         current_user = None
@@ -93,22 +103,58 @@ def register():
     else:
         add_output("User registered JoinMe with email " + current_user.email + ". \n")
         current_user = UserController.retrieve_user(UserFields.email.name, current_user.email)
-    print(current_user)
+    UserController.print_user(current_user)
     return
 
 
 def update_profile():
     global current_user
+    if not current_user:
+        add_output("You have to login first! \n")
+        return
+    temp = UserController.retrieve_user(UserFields.email.name, current_user.email)
+    if temp == Errors.MISSING.name:
+        add_output("No user with such credentials exists. \n")
+        return
+    elif temp == Errors.FAILURE.name:
+        return_failure()
+        return
+    user_id = current_user.uid
+    current_user = read_user()
+    current_user.uid = user_id
+
+    result = UserController.edit_user(current_user)
+    if result == Errors.MISSING.name:
+        add_output("No user with such credentials exists. \n")
+        current_user = temp
+    elif result == Errors.FAILURE.name:
+        return_failure()
+        current_user = temp
+    elif result == Errors.DUPLICATE.name:
+        add_output("A user with the same credentials already exists! \n")
+        current_user = temp
+    else:
+        add_output("User updated. Email now at: " + current_user.email + ". \n")
+        current_user = UserController.retrieve_user(UserFields.userid.name, result)
+    UserController.print_user(current_user)
     return
 
 
-def search_user():
+def login():
     global current_user
     email = user_email_input.get()
-    current_user = UserController.retrieve_user(UserFields.email.name, email)
-    print(str(current_user))
+    result = UserController.retrieve_user(UserFields.email.name, email)
+    if result == Errors.MISSING.name:
+        add_output("No user with such credential exists. \n")
+        UserController.print_user(current_user)
+        return
+    elif result == Errors.FAILURE.name:
+        add_output("Failed to login. Please try again. \n")
+        UserController.print_user(current_user)
+        return
     add_output("You logged in with email " + email + ". \n")
-    current_user = None
+    current_user = UserController.retrieve_user(UserFields.email.name, email)
+    UserController.print_user(current_user)
     return
 
 
@@ -138,8 +184,10 @@ def add_output(line: str):
 def return_failure():
     add_output("Connection failed. Please try again. \n")
 
+
 def joinEvent():
     return
+
 
 window = Tk()
 window.title('JoinMe')
@@ -196,8 +244,8 @@ update_button.place(x=170, y=242.5)
 Event_id_join = Label(window, text='Event ID:')
 Event_id_join.place(x=260, y=242.5)
 
-userID_input = Entry(window, relief='ridge', width=10)
-userID_input.place(x=320, y=240.5)
+event_id_input = Entry(window, relief='ridge', width=10)
+event_id_input.place(x=320, y=240.5)
 
 update_button = Button(window, text="Join Event", command=joinEvent)
 update_button.place(x=420, y= 243.5)
@@ -205,8 +253,8 @@ update_button.place(x=420, y= 243.5)
 
 Event_user = Label(window, text='User ID:')
 Event_user.place(x=180, y=270)
-userID_input = Entry(window, relief='ridge', width=10)
-userID_input.place(x=240, y=270)
+user_id_input = Entry(window, relief='ridge', width=10)
+user_id_input.place(x=240, y=270)
 
 remove_button = Button(window, text="Remove User", command=remove_user)
 remove_button.place(x=90, y=270)
@@ -261,15 +309,13 @@ updateProfile_button.place(x=155, y=525)
 user_email_input = Entry(window, relief='ridge', width=30)
 user_email_input.place(x=200, y=555)
 
-search_button = Button(window, text="Login with Email", command=search_user)
+search_button = Button(window, text="Login with Email", command=login)
 search_button.place(x=90, y=557.5)
 
 logout_button = Button(window, text="Logout", command=log_out)
 logout_button.place(x=490, y=557.5)
 
 # ------------------------------------------- Email -------------------------------------------
-
-
 
 invite_friend_button = Button(window, text="Invite Friend", command=invite_friend)
 invite_friend_button.place(x=90, y=587.5)

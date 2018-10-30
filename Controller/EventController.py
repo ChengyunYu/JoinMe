@@ -5,7 +5,7 @@ from Constants.Constants import Errors
 import datetime
 
 
-def post_event(user: UserModel, event: EventModel):
+def add_event(user: UserModel, event: EventModel):
     connector = SqlController().sql_connector
     cursor = connector.cursor()
     handled = False
@@ -19,36 +19,26 @@ def post_event(user: UserModel, event: EventModel):
     try:
         cursor.execute(sql, val)
         connector.commit()
+        handled = True
     except mysql.connector.errors.IntegrityError as err:
         print(err.msg)
         handled = True
+        return Errors.DUPLICATE.name
+    finally:
+        if not handled:
+            connector.rollback()
+            return Errors.FAILURE.name
 
     cursor.execute("SELECT @@identity")
     for x in cursor:
         event_id = x[0]
-
-    sql = "INSERT INTO host (hostid, eventid)" \
-          "VALUES(%s, %s)"
-    val = (user.uid, event_id)
-
-    try:
-        cursor.execute(sql, val)
-        connector.commit()
-        return event_id
-    except mysql.connector.errors.IntegrityError as err:
-        print(err.msg)
-        handled = True
-    finally:
-        connector.rollback()
-        if not handled:
-            return Errors.FAILURE.name
-        else:
-            return Errors.DUPLICATE.name
+    return event_id
 
 
-def edit_event(event: EventModel):
+def edit_event(user:UserModel, event: EventModel):
     connector = SqlController().sql_connector
     cursor = connector.cursor()
+    handled = False
 
     sql = "UPDATE event " \
           "SET title = %s, tags = %s, eventdate = %s, description = %s, " \
@@ -56,16 +46,20 @@ def edit_event(event: EventModel):
           "WHERE eventid = %s"
     val = (event.title, event.tags, event.event_date, event.description, event.image,
            event.location, event.expire_date, event.eid)
+
     try:
         cursor.execute(sql, val)
         connector.commit()
         if cursor.rowcount == 0:
+            handled = True
             return Errors.MISSING.name
         else:
+            handled = True
             return Errors.SUCCESS.name
     finally:
-        connector.rollback()
-        return Errors.FAILURE.name
+        if not handled:
+            connector.rollback()
+            return Errors.FAILURE.name
 
 
 def expire():
@@ -117,16 +111,16 @@ def join_event(user: UserModel, event: EventModel):
         connector.commit()
         event.attendees.append(user.uid)
         user.join_events.append(event.eid)
+        handled = True
         return user.uid, event.eid
     except mysql.connector.errors.IntegrityError as err:
         print(err.msg)
         handled = True
+        return Errors.DUPLICATE.name
     finally:
         connector.rollback()
         if not handled:
             return Errors.FAILURE.name
-        else:
-            return Errors.DUPLICATE.name
 
 
 def host_event(user: UserModel, event: EventModel):
@@ -134,25 +128,24 @@ def host_event(user: UserModel, event: EventModel):
     cursor = connector.cursor()
     handled = False
 
-    sql = "INSERT INTO host (hostid, eventid)" \
+    sql = "INSERT INTO Host (hostid, eventid)" \
           "VALUES(%s, %s)"
     val = (user.uid, event.eid)
 
     try:
         cursor.execute(sql, val)
         connector.commit()
-        event.hosts.append(user.uid)
-        user.host_events.append(event.eid)
-        return user.uid, event.eid
-    except mysql.connector.errors.IntegrityError as err:
-        print(err.msg)
         handled = True
-    finally:
-        connector.rollback()
+        return event.eid, user.uid
+    except mysql.connector.errors.IntegrityError as err:
         if not handled:
-            return Errors.FAILURE.name
-        else:
+            print(err.msg)
+            handled = True
             return Errors.DUPLICATE.name
+    finally:
+        if not handled:
+            connector.rollback()
+            return Errors.FAILURE.name
 
 
 def get_hosted_event(user: UserModel):
@@ -162,31 +155,6 @@ def get_hosted_event(user: UserModel):
     sql = "SELECT eventid " \
           "FROM host "\
           "WHERE hostid = %s"
-    val = [user.uid]
-
-    try:
-        cursor.execute(sql, val)
-        event_list = cursor.fetchone()
-        if not event_list:
-            return events
-        for result in event_list:
-            events.append(result[0])
-        return events
-    except mysql.connector.errors as err:
-        print(err.msg)
-        return Errors.FAILURE.name
-    finally:
-        connector.rollback()
-        return Errors.FAILURE.name
-
-
-def get_hosted_event(user: UserModel):
-    events = []
-    connector = SqlController().sql_connector
-    cursor = connector.cursor()
-    sql = "SELECT eventid " \
-          "FROM joins "\
-          "WHERE joinid = %s"
     val = [user.uid]
 
     try:

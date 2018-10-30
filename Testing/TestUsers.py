@@ -1,15 +1,8 @@
-from flask import Flask
-from Controller.SqlController import sql_controller
-from Controller import UserController
 from Constants.Constants import UserFields
 from Model.UserModel import UserModel
-
-app = Flask(__name__)
-app.register_blueprint(sql_controller, url_prefix='/Controllers')
+from Controller import UserController
 
 
-@app.route("/")
-# TODO: Replace the placeholder for main function with test cases.
 def test_retrieve_hit():
     user_one = UserModel('0',
                          'chengyun yu',
@@ -47,5 +40,5 @@ def test_retrieve_hit():
     return 'Tests Finished'
 
 
-if __name__ == "__main__":
-    app.run()
+decoded: str = '(\'Chengyun Yu\', \'yuche\', \'Male\', \'New York\', \'cy2468@columbia.edu\', \'sports\', \"I\'m a sports guy. \", 64)'
+print(UserController.decode_string(decoded))
