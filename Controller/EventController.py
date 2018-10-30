@@ -15,6 +15,7 @@ def add_event(user: UserModel, event: EventModel):
           "VALUES " \
           "(%s, %s, %s, %s, %s, %s,%s)"
     val = (event.title, event.tags, event.event_date,
+           
            event.description, event.image, event.location, event.expire_date)
     try:
         cursor.execute(sql, val)
