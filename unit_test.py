@@ -14,9 +14,9 @@ class Test(unittest.TestCase):
     def test_post_event(self):
         event_id_1 = EventController.post_event(self.user_1, self.event_1)
         self.assertIsNotNone(event_id_1)
-        print(1)
         
-#     def test_edit_event(self):
+    def test_edit_event(self):
+        
     
 #     def test_expire:
         
@@ -33,15 +33,13 @@ class Test(unittest.TestCase):
     # test user model
     def test_add_user(self):
         UserController.delete_user('nickname_1', 'email_1')
-        self.assertEqual(UserController.add_user(self.user_1), 'Success')
+        self.assertEqual(UserController.add_user(self.user_1), 'SUCCESS')
         self.assertEqual(UserController.add_user(self.user_1), 'DUPLICATE')
         UserController.delete_user('nickname_1', 'email_1')
-        print(2)
         
     def test_delete_user(self):
         self.assertEqual(UserController.delete_user('nickname_1', 'email_1'), 'SUCCESS')
         self.assertEqual(UserController.delete_user('fake_nickname_1', 'fake_email_1'), 'SUCCESS')
-        print(3)
         
 #     def test_edit_user:
         
