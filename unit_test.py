@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
     # test user model
     def test_add_user(self):
         UserController.delete_user('nickname_1', 'email_1')
-        self.assertEqual(UserController.add_user(self.user_1), 'Success')
+        self.assertEqual(UserController.add_user(self.user_1), 'SUCCESS')
         self.assertEqual(UserController.add_user(self.user_1), 'DUPLICATE')
         UserController.delete_user('nickname_1', 'email_1')
         
